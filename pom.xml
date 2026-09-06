@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.eia</groupId>
+    <artifactId>cronicasgatunas</artifactId>
+    <version>1.0.0</version>
+    <packaging>jar</packaging>
+
+    <name>CronicasGatunas</name>
+    <description>Languages and Compilers - Proyecto parcial: BFS/DFS, Dijkstra, Floyd-Warshall/Bellman-Ford, Kruskal</description>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+
+        <!-- Version de JavaFX. Sin module-info.java: se usa via classpath plano. -->
+        <javafx.version>21.0.2</javafx.version>
+
+        <!-- Ajustar segun el sistema operativo donde se compile/corra: win, linux, mac -->
+        <javafx.platform>win</javafx.platform>
+
+        <junit.version>5.10.2</junit.version>
+
+        <!-- Clase con el metodo main que extiende javafx.application.Application -->
+        <main.class>app.Main</main.class>
+    </properties>
+
+    <dependencies>
+        <!-- ===================== JavaFX ===================== -->
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-controls</artifactId>
+            <version>${javafx.version}</version>
+            <classifier>${javafx.platform}</classifier>
+        </dependency>
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-graphics</artifactId>
+            <version>${javafx.version}</version>
+            <classifier>${javafx.platform}</classifier>
+        </dependency>
+        <!-- Solo si en algun punto usan FXML; si todas las vistas son en Java puro,
+             pueden eliminar esta dependencia sin problema. -->
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-fxml</artifactId>
+            <version>${javafx.version}</version>
+            <classifier>${javafx.platform}</classifier>
+        </dependency>
+
+        <!-- ===================== Testing ===================== -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-params</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <finalName>cronicasgatunas</finalName>
+        <plugins>
+            <!-- Compilador -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+                <configuration>
+                    <release>17</release>
+                </configuration>
+            </plugin>
+
+            <!-- Tests -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.5</version>
+            </plugin>
+
+            <!--
+                javafx-maven-plugin: permite correr la app en desarrollo con:
+                    mvn javafx:run
+                Util mientras se programa, sin necesidad de empaquetar cada vez.
+            -->
+            <plugin>
+                <groupId>org.openjfx</groupId>
+                <artifactId>javafx-maven-plugin</artifactId>
+                <version>0.0.8</version>
+                <configuration>
+                    <mainClass>${main.class}</mainClass>
+                </configuration>
+            </plugin>
+
+            <!--
+                maven-shade-plugin: genera un JAR ejecutable "fat jar" con todas las
+                dependencias (incluida JavaFX) dentro de target/cronicasgatunas.jar.
+                Esto es lo que permite el comando unico exigido en 7.4:
+                    mvn clean package
+                    java -jar target/cronicasgatunas.jar
+
+                Nota: como el proyecto NO usa module-info.java (classpath plano),
+                el shade plugin funciona sin problemas de module-path. Si en algun
+                momento agregan module-info.java, este plugin deja de servir y
+                hay que usar javafx:jlink en su lugar.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.5.3</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>${main.class}</mainClass>
+                                </transformer>
+                            </transformers>
+                            <!-- Evita conflictos de firmas al fusionar los jars de JavaFX -->
+                            <filters>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

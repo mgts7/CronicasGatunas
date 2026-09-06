@@ -1,0 +1,61 @@
+### Maven ###
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+### IntelliJ IDEA ###
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# Si en algun momento generan el proyecto con el wrapper de Maven,
+# esta carpeta trae binarios que no deben versionarse:
+.mvn/wrapper/maven-wrapper.jar
+
+### Compilados de Java ###
+*.class
+
+### Empaquetados (se generan con mvn package, no se suben) ###
+*.jar
+*.war
+!.mvn/wrapper/maven-wrapper.jar
+*.zip
+*.tar.gz
+*.rar
+
+### Logs ###
+*.log
+hs_err_pid*
+replay_pid*
+
+### Sistema operativo: Windows ###
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+### Sistema operativo: macOS (por si algun companero de equipo usa Mac) ###
+.DS_Store
+.AppleDouble
+.LSOverride
+
+### Sistema operativo: Linux (por si acaso) ###
+*~
+.directory
+
+### Archivos temporales de editor ###
+*.swp
+*.swo
+
+### Variables de entorno / configuracion local (si alguna vez agregan alguna) ###
+.env
