@@ -13,7 +13,7 @@ class BFSSolverTest {
     void sampleFromStatement_returnsMinimumMoves() {
         Grid grid = Mission1Test.sampleGridFromStatement();
 
-        int result = BFSSolver.solve(grid, 0, 0, 9, 9);
+        int result = BFSSolver.solve(grid, 0, 0, 9, 9).getMoves();
 
         assertEquals(18, result);
     }
@@ -23,7 +23,7 @@ class BFSSolverTest {
     void sameStartAndEnd_returnsZero() {
         Grid grid = new Grid(5, 5);
 
-        int result = BFSSolver.solve(grid, 2, 2, 2, 2);
+        int result = BFSSolver.solve(grid, 2, 2, 2, 2).getMoves();
 
         assertEquals(0, result);
     }
@@ -34,7 +34,7 @@ class BFSSolverTest {
         Grid grid = new Grid(3, 3);
         grid.setBomb(0, 0);
 
-        int result = BFSSolver.solve(grid, 0, 0, 2, 2);
+        int result = BFSSolver.solve(grid, 0, 0, 2, 2).getMoves();
 
         assertEquals(BFSSolver.UNREACHABLE, result);
     }
@@ -45,7 +45,7 @@ class BFSSolverTest {
         Grid grid = new Grid(3, 3);
         grid.setBomb(2, 2);
 
-        int result = BFSSolver.solve(grid, 0, 0, 2, 2);
+        int result = BFSSolver.solve(grid, 0, 0, 2, 2).getMoves();
 
         assertEquals(BFSSolver.UNREACHABLE, result);
     }
@@ -59,7 +59,7 @@ class BFSSolverTest {
         grid.setBomb(1, 2);
         grid.setBomb(2, 1);
 
-        int result = BFSSolver.solve(grid, 0, 0, 2, 2);
+        int result = BFSSolver.solve(grid, 0, 0, 2, 2).getMoves();
 
         assertEquals(BFSSolver.UNREACHABLE, result);
     }
@@ -69,7 +69,7 @@ class BFSSolverTest {
     void openGrid_returnsManhattanDistance() {
         Grid grid = new Grid(10, 10);
 
-        int result = BFSSolver.solve(grid, 0, 0, 5, 5);
+        int result = BFSSolver.solve(grid, 0, 0, 5, 5).getMoves();
 
         assertEquals(10, result); // |5-0| + |5-0| = 10
     }

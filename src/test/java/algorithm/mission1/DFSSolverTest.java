@@ -14,7 +14,8 @@ class DFSSolverTest {
     void sampleFromStatement_returnsPathWithFixedOrder() {
         Grid grid = Mission1Test.sampleGridFromStatement();
 
-        int result = DFSSolver.solve(grid, 0, 0, 9, 9);
+        // Agregado .getMoves()
+        int result = DFSSolver.solve(grid, 0, 0, 9, 9).getMoves();
 
         assertEquals(32, result);
     }
@@ -24,8 +25,9 @@ class DFSSolverTest {
     void dfsResult_isNeverShorterThanBfs() {
         Grid grid = Mission1Test.sampleGridFromStatement();
 
-        int bfs = BFSSolver.solve(grid, 0, 0, 9, 9);
-        int dfs = DFSSolver.solve(grid, 0, 0, 9, 9);
+        int bfs = BFSSolver.solve(grid, 0, 0, 9, 9).getMoves();
+        // Agregado .getMoves()
+        int dfs = DFSSolver.solve(grid, 0, 0, 9, 9).getMoves();
 
         assertTrue(dfs >= bfs, "DFS no puede encontrar un camino mas corto que el optimo de BFS");
     }
@@ -35,7 +37,8 @@ class DFSSolverTest {
     void sameStartAndEnd_returnsZero() {
         Grid grid = new Grid(5, 5);
 
-        int result = DFSSolver.solve(grid, 2, 2, 2, 2);
+        // Agregado .getMoves()
+        int result = DFSSolver.solve(grid, 2, 2, 2, 2).getMoves();
 
         assertEquals(0, result);
     }
@@ -46,7 +49,8 @@ class DFSSolverTest {
         Grid grid = new Grid(3, 3);
         grid.setBomb(0, 0);
 
-        int result = DFSSolver.solve(grid, 0, 0, 2, 2);
+        // Agregado .getMoves()
+        int result = DFSSolver.solve(grid, 0, 0, 2, 2).getMoves();
 
         assertEquals(DFSSolver.UNREACHABLE, result);
     }
@@ -57,7 +61,8 @@ class DFSSolverTest {
         Grid grid = new Grid(3, 3);
         grid.setBomb(2, 2);
 
-        int result = DFSSolver.solve(grid, 0, 0, 2, 2);
+        // Agregado .getMoves()
+        int result = DFSSolver.solve(grid, 0, 0, 2, 2).getMoves();
 
         assertEquals(DFSSolver.UNREACHABLE, result);
     }
@@ -69,7 +74,8 @@ class DFSSolverTest {
         grid.setBomb(1, 2);
         grid.setBomb(2, 1);
 
-        int result = DFSSolver.solve(grid, 0, 0, 2, 2);
+        // Agregado .getMoves()
+        int result = DFSSolver.solve(grid, 0, 0, 2, 2).getMoves();
 
         assertEquals(DFSSolver.UNREACHABLE, result);
     }
@@ -79,8 +85,9 @@ class DFSSolverTest {
     void bfsAndDfsAgreeOnReachability() {
         Grid grid = Mission1Test.sampleGridFromStatement();
 
-        boolean bfsReachable = BFSSolver.solve(grid, 0, 0, 9, 9) != BFSSolver.UNREACHABLE;
-        boolean dfsReachable = DFSSolver.solve(grid, 0, 0, 9, 9) != DFSSolver.UNREACHABLE;
+        // Usado .isReachable() de la clase Result en lugar de comparar con la constante UNREACHABLE directamente
+        boolean bfsReachable = BFSSolver.solve(grid, 0, 0, 9, 9).isReachable();
+        boolean dfsReachable = DFSSolver.solve(grid, 0, 0, 9, 9).isReachable();
 
         assertEquals(bfsReachable, dfsReachable);
     }
@@ -91,7 +98,8 @@ class DFSSolverTest {
         // Grid de 1 fila x 5 columnas: el unico movimiento posible es hacia la derecha.
         Grid grid = new Grid(1, 5);
 
-        int result = DFSSolver.solve(grid, 0, 0, 0, 4);
+        // Agregado .getMoves()
+        int result = DFSSolver.solve(grid, 0, 0, 0, 4).getMoves();
 
         assertEquals(4, result);
     }

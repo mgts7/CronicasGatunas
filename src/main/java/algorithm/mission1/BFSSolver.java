@@ -20,7 +20,8 @@ import java.util.Deque;
  *
  * Complejidad:
  *   - Tiempo:  O(R * C) - cada celda se encola y desencola una sola vez.
- *   - Espacio: O(R * C) - arreglo de distancias + cola.
+ *   - Espacio: O(R * C) - arreglo de distancias + arreglo de padres
+ *              (para reconstruir el camino) + cola.
  *
  * No se construye una lista de adyacencia explicita (a diferencia
  * del ejemplo generico de grafos): los vecinos se calculan al vuelo
@@ -44,25 +45,28 @@ public final class BFSSolver {
     }
 
     /**
-     * Calcula el numero minimo de movimientos desde (startRow, startCol)
-     * hasta (endRow, endCol).
+     * Calcula el camino minimo desde (startRow, startCol) hasta (endRow, endCol).
      *
-     * @return la distancia minima, 0 si start == end, o UNREACHABLE
-     *         si no existe camino (o si start/end contienen una bomba).
+     * @return un Result con el numero minimo de movimientos y el
+     *         camino completo (celda por celda, desde start hasta
+     *         end inclusive), o un Result no alcanzable si no existe
+     *         camino (o si start/end contienen una bomba).
      */
-    public static int solve(Grid grid, int startRow, int startCol, int endRow, int endCol) {
+    public static Result solve(Grid grid, int startRow, int startCol, int endRow, int endCol) {
         if (grid.isBomb(startRow, startCol) || grid.isBomb(endRow, endCol)) {
-            return UNREACHABLE;
+            return Result.unreachable();
         }
         if (startRow == endRow && startCol == endCol) {
-            return 0;
+            return Result.of(0, new int[][] { {startRow, startCol} });
         }
 
         int rows = grid.getRows();
         int cols = grid.getCols();
 
         int[] distance = new int[rows * cols];
+        int[] parent = new int[rows * cols];
         Arrays.fill(distance, UNREACHABLE);
+        Arrays.fill(parent, -1);
 
         int startIdx = grid.toIndex(startRow, startCol);
         int endIdx = grid.toIndex(endRow, endCol);
@@ -78,7 +82,7 @@ public final class BFSSolver {
             // Corte temprano: en cuanto se desencola el destino,
             // su distancia ya es minima (propiedad de BFS).
             if (currentIdx == endIdx) {
-                return distance[currentIdx];
+                return Result.of(distance[currentIdx], reconstructPath(parent, startIdx, endIdx, cols, distance[currentIdx]));
             }
 
             int currentRow = currentIdx / cols;
@@ -101,11 +105,66 @@ public final class BFSSolver {
                 }
 
                 distance[neighborIdx] = distance[currentIdx] + 1;
+                parent[neighborIdx] = currentIdx;
                 queue.add(neighborIdx);
             }
         }
 
         // La cola se vacio sin encontrar el destino.
-        return UNREACHABLE;
+        return Result.unreachable();
+    }
+
+    /**
+     * Reconstruye el camino desde start hasta end siguiendo los
+     * punteros de padre hacia atras, y luego invierte el resultado
+     * para que quede en orden start -> end.
+     */
+    private static int[][] reconstructPath(int[] parent, int startIdx, int endIdx, int cols, int moves) {
+        int[][] path = new int[moves + 1][2];
+
+        int currentIdx = endIdx;
+        for (int i = moves; i >= 0; i--) {
+            path[i][0] = currentIdx / cols;
+            path[i][1] = currentIdx % cols;
+            currentIdx = (currentIdx == startIdx) ? -1 : parent[currentIdx];
+        }
+
+        return path;
+    }
+
+    /**
+     * Resultado de BFS: si el destino es alcanzable, el numero
+     * minimo de movimientos y el camino completo (para que la GUI
+     * lo resalte); si no, ninguno de los dos tiene sentido.
+     */
+    public static final class Result {
+        private final int moves;
+        private final int[][] path;
+
+        private Result(int moves, int[][] path) {
+            this.moves = moves;
+            this.path = path;
+        }
+
+        static Result of(int moves, int[][] path) {
+            return new Result(moves, path);
+        }
+
+        static Result unreachable() {
+            return new Result(UNREACHABLE, new int[0][]);
+        }
+
+        public boolean isReachable() {
+            return moves != UNREACHABLE;
+        }
+
+        public int getMoves() {
+            return moves;
+        }
+
+        /** El camino completo, celda por celda, desde start hasta end (ambos incluidos). Vacio si es inalcanzable. */
+        public int[][] getPath() {
+            return path;
+        }
     }
 }

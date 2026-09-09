@@ -28,6 +28,15 @@ import model.grid.Grid;
  *   produce un camino (tambien valido) distinto, que no coincidiria
  *   con la respuesta esperada.
  *
+ * Reconstruccion del camino (sin trabajo extra):
+ *   La pila explicita YA ES el camino actual desde start hasta el
+ *   nodo en el que estamos. Cuando currentIdx == endIdx, el
+ *   contenido de stackNode[0..top] es exactamente la secuencia de
+ *   celdas visitadas desde start hasta end: no hace falta ningun
+ *   arreglo de padres ni reconstruccion hacia atras (a diferencia
+ *   de BFS, que si lo necesita porque explora en orden de niveles,
+ *   no en el orden final del camino).
+ *
  * Complejidad:
  *   - Tiempo:  O(R * C) - cada celda se visita (se marca visited) una sola vez;
  *              cada frame de la pila hace a lo sumo 4 intentos de vecino.
@@ -51,16 +60,16 @@ public final class DFSSolver {
      * Encuentra un camino desde (startRow, startCol) hasta (endRow, endCol)
      * explorando con DFS en el orden fijo arriba/abajo/izquierda/derecha.
      *
-     * @return el numero de movimientos del camino encontrado, 0 si
-     *         start == end, o UNREACHABLE si no existe camino (o si
-     *         start/end contienen una bomba).
+     * @return un Result con el numero de movimientos y el camino
+     *         completo (celda por celda), o un Result no alcanzable
+     *         si no existe camino (o si start/end contienen una bomba).
      */
-    public static int solve(Grid grid, int startRow, int startCol, int endRow, int endCol) {
+    public static Result solve(Grid grid, int startRow, int startCol, int endRow, int endCol) {
         if (grid.isBomb(startRow, startCol) || grid.isBomb(endRow, endCol)) {
-            return UNREACHABLE;
+            return Result.unreachable();
         }
         if (startRow == endRow && startCol == endCol) {
-            return 0;
+            return Result.of(0, new int[][] { {startRow, startCol} });
         }
 
         int rows = grid.getRows();
@@ -89,7 +98,7 @@ public final class DFSSolver {
             // El numero de movimientos hasta aqui es igual a la
             // profundidad actual de la pila (frame 0 = start = 0 movimientos).
             if (currentIdx == endIdx) {
-                return top;
+                return Result.of(top, extractPath(stackNode, top, cols));
             }
 
             if (stackNextDir[top] < 4) {
@@ -122,6 +131,52 @@ public final class DFSSolver {
         }
 
         // La pila se vacio sin encontrar el destino.
-        return UNREACHABLE;
+        return Result.unreachable();
+    }
+
+    /** Convierte los indices planos que quedaron en la pila (0..top) a pares (row, col), en orden start -> end. */
+    private static int[][] extractPath(int[] stackNode, int top, int cols) {
+        int[][] path = new int[top + 1][2];
+        for (int i = 0; i <= top; i++) {
+            path[i][0] = stackNode[i] / cols;
+            path[i][1] = stackNode[i] % cols;
+        }
+        return path;
+    }
+
+    /**
+     * Resultado de DFS: si el destino es alcanzable, el numero de
+     * movimientos del camino encontrado y el camino completo (para
+     * que la GUI lo resalte); si no, ninguno de los dos tiene sentido.
+     */
+    public static final class Result {
+        private final int moves;
+        private final int[][] path;
+
+        private Result(int moves, int[][] path) {
+            this.moves = moves;
+            this.path = path;
+        }
+
+        static Result of(int moves, int[][] path) {
+            return new Result(moves, path);
+        }
+
+        static Result unreachable() {
+            return new Result(UNREACHABLE, new int[0][]);
+        }
+
+        public boolean isReachable() {
+            return moves != UNREACHABLE;
+        }
+
+        public int getMoves() {
+            return moves;
+        }
+
+        /** El camino completo, celda por celda, desde start hasta end (ambos incluidos). Vacio si es inalcanzable. */
+        public int[][] getPath() {
+            return path;
+        }
     }
 }

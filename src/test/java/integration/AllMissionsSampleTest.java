@@ -44,8 +44,8 @@ class AllMissionsSampleTest {
         assertEquals(1, cases.size());
 
         Mission1Parser.TestCase tc = cases.get(0);
-        int bfs = BFSSolver.solve(tc.getGrid(), tc.getStartRow(), tc.getStartCol(), tc.getEndRow(), tc.getEndCol());
-        int dfs = DFSSolver.solve(tc.getGrid(), tc.getStartRow(), tc.getStartCol(), tc.getEndRow(), tc.getEndCol());
+        BFSSolver.Result bfs = BFSSolver.solve(tc.getGrid(), tc.getStartRow(), tc.getStartCol(), tc.getEndRow(), tc.getEndCol());
+        DFSSolver.Result dfs = DFSSolver.solve(tc.getGrid(), tc.getStartRow(), tc.getStartCol(), tc.getEndRow(), tc.getEndCol());
 
         Mission1Result result = Mission1Result.of(1, bfs, dfs);
         assertEquals("Case #1: BFS 18 DFS 32", result.toOutputLine());
