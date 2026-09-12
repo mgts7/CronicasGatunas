@@ -11,17 +11,18 @@ public final class Mission2Result {
     private final int caseNumber;
     private final boolean reachable;
     private final long cost;
+    private final int[] path;
 
-    private Mission2Result(int caseNumber, boolean reachable, long cost) {
+    private Mission2Result(int caseNumber, boolean reachable, long cost, int[] path) {
         this.caseNumber = caseNumber;
         this.reachable = reachable;
         this.cost = cost;
+        this.path = path;
     }
 
     /** Construye el resultado a partir de lo que devolvio DijkstraSolver.solve(...). */
-    public static Mission2Result of(int caseNumber, long cost) {
-        boolean reachable = cost != DijkstraSolver.UNREACHABLE;
-        return new Mission2Result(caseNumber, reachable, cost);
+    public static Mission2Result of(int caseNumber, DijkstraSolver.Result result) {
+        return new Mission2Result(caseNumber, result.isReachable(), result.getCost(), result.getPath());
     }
 
     public int getCaseNumber() {
@@ -34,6 +35,11 @@ public final class Mission2Result {
 
     public long getCost() {
         return cost;
+    }
+
+    /** La secuencia de nodos del camino, para resaltarla en el dibujo de la red. */
+    public int[] getPath() {
+        return path;
     }
 
     /**

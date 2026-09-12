@@ -3,6 +3,9 @@ package algorithm.mission2;
 import model.graph.Edge;
 import model.graph.Graph;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.PriorityQueue;
 
 /**
@@ -15,26 +18,20 @@ import java.util.PriorityQueue;
  *   exactamente la condicion que garantiza que Dijkstra sea
  *   correcto: una vez que un nodo se extrae de la cola de
  *   prioridad con su distancia minima, esa distancia ya no puede
- *   mejorar (ningun peso negativo podria "abaratar" un camino
- *   futuro). Con pesos negativos este supuesto se rompe y Dijkstra
- *   puede dar respuestas incorrectas (ver Mission 3, que si permite
- *   pesos negativos y por eso usa Bellman-Ford en su lugar).
+ *   mejorar. Con pesos negativos este supuesto se rompe (ver
+ *   Mission 3, que si permite pesos negativos y por eso usa
+ *   Bellman-Ford en su lugar).
  *
  * Complejidad:
- *   - Tiempo:  O((N + C) log N) usando PriorityQueue: cada arista
- *              provoca a lo sumo una insercion en la cola, y cada
- *              insercion/extraccion cuesta O(log N).
- *   - Espacio: O(N + C) para el arreglo de distancias y la cola.
- *   Un escaneo O(N^2) sin cola de prioridad NO es aceptable a los
- *   limites del enunciado (N hasta 10,000).
+ *   - Tiempo:  O((N + C) log N) usando PriorityQueue.
+ *   - Espacio: O(N + C) para distancias, padres y la cola.
  *
- * Sobre el valor centinela:
- *   dist[] se inicializa en Long.MAX_VALUE para representar "aun no
- *   alcanzado". Nunca se hace aritmetica sobre ese valor: solo se
- *   compara (newDist < dist[vecino]), y newDist siempre se calcula
- *   a partir de la distancia de un nodo YA extraido de la cola
- *   (por lo tanto, siempre finita). Esto evita el desborde que
- *   ocurriria si se sumara un peso a Long.MAX_VALUE.
+ * Reconstruccion del camino:
+ *   Ademas del costo, se guarda un arreglo de padres (parent[]) que
+ *   se actualiza cada vez que se relaja una arista con una distancia
+ *   mejor. Al llegar al destino, se sigue esa cadena de padres hacia
+ *   atras para reconstruir la ruta completa nodo por nodo, necesaria
+ *   para que la GUI resalte el camino sobre la red.
  */
 public final class DijkstraSolver {
 
@@ -46,19 +43,23 @@ public final class DijkstraSolver {
     }
 
     /**
-     * Calcula el costo minimo de la ruta desde source hasta destination.
+     * Calcula la ruta de costo minimo desde source hasta destination.
      *
-     * @return el costo minimo, 0 si source == destination, o
-     *         UNREACHABLE si destination no es alcanzable desde source.
+     * @return un Result con el costo minimo y la secuencia completa
+     *         de nodos del camino (desde source hasta destination,
+     *         ambos incluidos), o un Result no alcanzable si
+     *         destination no es alcanzable desde source.
      */
-    public static long solve(Graph graph, int source, int destination) {
+    public static Result solve(Graph graph, int source, int destination) {
         if (source == destination) {
-            return 0L;
+            return Result.of(0L, new int[] { source });
         }
 
         int n = graph.getNumNodes();
         long[] dist = new long[n];
-        java.util.Arrays.fill(dist, Long.MAX_VALUE);
+        int[] parent = new int[n];
+        Arrays.fill(dist, Long.MAX_VALUE);
+        Arrays.fill(parent, -1);
         dist[source] = 0L;
 
         PriorityQueue<NodeDistance> queue = new PriorityQueue<>();
@@ -67,29 +68,49 @@ public final class DijkstraSolver {
         while (!queue.isEmpty()) {
             NodeDistance current = queue.poll();
 
-            // Lazy deletion: puede haber entradas obsoletas en la cola
-            // (se agrego una version mas barata despues). Se ignoran.
+            // Lazy deletion: entradas obsoletas en la cola se ignoran.
             if (current.distance > dist[current.node]) {
                 continue;
             }
 
             // Corte temprano: en cuanto se extrae el destino, su
             // distancia ya es minima (propiedad de Dijkstra con
-            // pesos no negativos).
+            // pesos no negativos), y su camino ya quedo fijado en parent[].
             if (current.node == destination) {
-                return current.distance;
+                return Result.of(current.distance, reconstructPath(parent, source, destination));
             }
 
             for (Edge edge : graph.getNeighbors(current.node)) {
                 long candidate = current.distance + edge.getWeight();
                 if (candidate < dist[edge.getTo()]) {
                     dist[edge.getTo()] = candidate;
+                    parent[edge.getTo()] = current.node;
                     queue.add(new NodeDistance(edge.getTo(), candidate));
                 }
             }
         }
 
-        return dist[destination] == Long.MAX_VALUE ? UNREACHABLE : dist[destination];
+        // La cola se vacio sin extraer el destino: es inalcanzable.
+        return Result.unreachable();
+    }
+
+    /** Sigue la cadena de padres desde destination hacia atras hasta source, y la invierte. */
+    private static int[] reconstructPath(int[] parent, int source, int destination) {
+        List<Integer> reversed = new ArrayList<>();
+        int current = destination;
+        while (true) {
+            reversed.add(current);
+            if (current == source) {
+                break;
+            }
+            current = parent[current];
+        }
+
+        int[] path = new int[reversed.size()];
+        for (int i = 0; i < path.length; i++) {
+            path[i] = reversed.get(reversed.size() - 1 - i);
+        }
+        return path;
     }
 
     /**
@@ -108,6 +129,42 @@ public final class DijkstraSolver {
         @Override
         public int compareTo(NodeDistance other) {
             return Long.compare(this.distance, other.distance);
+        }
+    }
+
+    /**
+     * Resultado de Dijkstra: si el destino es alcanzable, el costo
+     * minimo y el camino completo (para que la GUI lo resalte sobre
+     * la red); si no, ninguno de los dos tiene sentido.
+     */
+    public static final class Result {
+        private final long cost;
+        private final int[] path;
+
+        private Result(long cost, int[] path) {
+            this.cost = cost;
+            this.path = path;
+        }
+
+        static Result of(long cost, int[] path) {
+            return new Result(cost, path);
+        }
+
+        static Result unreachable() {
+            return new Result(UNREACHABLE, new int[0]);
+        }
+
+        public boolean isReachable() {
+            return cost != UNREACHABLE;
+        }
+
+        public long getCost() {
+            return cost;
+        }
+
+        /** La secuencia de nodos del camino, desde source hasta destination (ambos incluidos). Vacio si es inalcanzable. */
+        public int[] getPath() {
+            return path;
         }
     }
 }

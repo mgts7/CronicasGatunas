@@ -1,6 +1,7 @@
 package gui;
 
 import gui.mission1.Mission1View;
+import gui.mission2.Mission2View;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -51,6 +52,8 @@ public final class MainAppView {
     private static final double MAX_SCREEN_FRACTION = 0.85;
 
     private final Stage stage;
+    private double windowWidth;
+    private double windowHeight;
 
     public MainAppView(Stage stage) {
         this.stage = stage;
@@ -62,6 +65,8 @@ public final class MainAppView {
         double scale = computeScaleToFitScreen(background.getWidth(), background.getHeight());
         double width = background.getWidth() * scale;
         double height = background.getHeight() * scale;
+        this.windowWidth = width;
+        this.windowHeight = height;
 
         ImageView imageView = new ImageView(background);
         imageView.setFitWidth(width);
@@ -88,10 +93,10 @@ public final class MainAppView {
         Button mission1Button = new Button("Mision 1: El Minefield");
         mission1Button.setOnAction(e -> openMission1());
 
-        // TODO: habilitar cuando existan Mission2View, Mission3View y Mission4View.
         Button mission2Button = new Button("Mision 2: Las Cuentas de Claude");
-        mission2Button.setDisable(true);
+        mission2Button.setOnAction(e -> openMission2());
 
+        // TODO: habilitar cuando existan Mission3View y Mission4View.
         Button mission3Button = new Button("Mision 3: El Food Stash");
         mission3Button.setDisable(true);
 
@@ -104,11 +109,19 @@ public final class MainAppView {
     }
 
     private void openMission1() {
-        Mission1View mission1View = new Mission1View();
-        Scene scene = new Scene(mission1View, 950, 650);
+        Mission1View mission1View = new Mission1View(this::show);
+        Scene scene = new Scene(mission1View, windowWidth, windowHeight);
 
         stage.setScene(scene);
-        stage.setResizable(true); // Mission1View si se beneficia de poder redimensionar/hacer scroll
+        stage.setResizable(false);
+    }
+
+    private void openMission2() {
+        Mission2View mission2View = new Mission2View(this::show);
+        Scene scene = new Scene(mission2View, windowWidth, windowHeight);
+
+        stage.setScene(scene);
+        stage.setResizable(false);
     }
 
     /**

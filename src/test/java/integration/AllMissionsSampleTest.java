@@ -63,8 +63,8 @@ class AllMissionsSampleTest {
 
         int i = 0;
         for (Mission2Parser.TestCase tc : cases) {
-            long cost = DijkstraSolver.solve(tc.getGraph(), tc.getSource(), tc.getDestination());
-            Mission2Result result = Mission2Result.of(i + 1, cost);
+            DijkstraSolver.Result dijkstraResult = DijkstraSolver.solve(tc.getGraph(), tc.getSource(), tc.getDestination());
+            Mission2Result result = Mission2Result.of(i + 1, dijkstraResult);
             assertEquals(expected[i], result.toOutputLine());
             i++;
         }
