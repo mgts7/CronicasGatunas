@@ -129,6 +129,11 @@ public final class FloydWarshallSolver {
             return unbounded[i][j];
         }
 
+        /** La matriz completa de unbounded, para que MatrixTableView pueda formatear cada celda sin llamar isUnbounded() 10000 veces desde afuera. */
+        public boolean[][] getUnboundedMatrix() {
+            return unbounded;
+        }
+
         public boolean hasRoute(int i, int j) {
             return maxChurun[i][j] != NO_ROUTE;
         }

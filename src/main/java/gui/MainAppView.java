@@ -2,6 +2,7 @@ package gui;
 
 import gui.mission1.Mission1View;
 import gui.mission2.Mission2View;
+import gui.mission3.Mission3View;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -90,15 +91,14 @@ public final class MainAppView {
     }
 
     private VBox buildMissionButtons() {
-        Button mission1Button = new Button("Mision 1: El Minefield");
+        Button mission1Button = new Button("Mision 1: Minefield");
         mission1Button.setOnAction(e -> openMission1());
 
-        Button mission2Button = new Button("Mision 2: Las Cuentas de Claude");
+        Button mission2Button = new Button("Mision 2: Recuperando Claude");
         mission2Button.setOnAction(e -> openMission2());
 
-        // TODO: habilitar cuando existan Mission3View y Mission4View.
         Button mission3Button = new Button("Mision 3: El Food Stash");
-        mission3Button.setDisable(true);
+        mission3Button.setOnAction(e -> openMission3());
 
         Button mission4Button = new Button("Mision 4: Reconectando la Red");
         mission4Button.setDisable(true);
@@ -119,6 +119,14 @@ public final class MainAppView {
     private void openMission2() {
         Mission2View mission2View = new Mission2View(this::show);
         Scene scene = new Scene(mission2View, windowWidth, windowHeight);
+
+        stage.setScene(scene);
+        stage.setResizable(false);
+    }
+
+    private void openMission3() {
+        Mission3View mission3View = new Mission3View(this::show);
+        Scene scene = new Scene(mission3View, windowWidth, windowHeight);
 
         stage.setScene(scene);
         stage.setResizable(false);

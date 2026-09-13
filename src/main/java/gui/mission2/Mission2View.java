@@ -148,17 +148,18 @@ public final class Mission2View extends StackPane {
     // ---------------------------------------------------------
 
     private VBox buildGraphSection() {
+        StackPane canvasWrapper = new StackPane(graphCanvas);
 
-
-        ScrollPane scrollPane = new ScrollPane(graphCanvas);
+        ScrollPane scrollPane = new ScrollPane(canvasWrapper);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setFitToHeight(true);
         scrollPane.setPrefViewportWidth(560);
         scrollPane.setPrefViewportHeight(560);
         scrollPane.setStyle("-fx-background: transparent; -fx-background-color: transparent;");
 
         VBox box = new VBox(6, scrollPane);
-        box.setAlignment(Pos.TOP_CENTER);
-
-        box.setPadding(new Insets(0, 525, 0, 525));
+        box.setAlignment(Pos.CENTER);
+        VBox.setVgrow(scrollPane, Priority.ALWAYS);
         return box;
     }
 

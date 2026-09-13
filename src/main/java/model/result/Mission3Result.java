@@ -14,6 +14,13 @@ import algorithm.mission3.FloydWarshallSolver;
  * obligatorio: "the GUI must report a mismatch if the two ever
  * disagree").
  *
+ * Ademas de la clasificacion y el valor, esta clase guarda todo lo
+ * que Mission3View necesita para dibujar: la matriz de unbounded
+ * (para que MatrixTableView no tenga que volver a llamar
+ * isUnbounded() celda por celda) y, segun el caso, la ruta
+ * (getRoute()) o el ciclo (getCycle()) que hay que resaltar en el
+ * GraphCanvas (seccion 5, punto 3).
+ *
  * Se hace aqui, y no en la GUI, para que esta logica de combinacion
  * sea testeable con JUnit sin abrir ninguna ventana (requisito 7.2).
  */
@@ -28,20 +35,27 @@ public final class Mission3Result {
 
     private final int caseNumber;
     private final long[][] matrix;
+    private final boolean[][] unboundedMatrix;
     private final int source;
     private final int destination;
     private final Classification classification;
     private final long value;
+    private final int[] route;
+    private final int[] cycle;
     private final boolean crossCheckMismatch;
 
-    private Mission3Result(int caseNumber, long[][] matrix, int source, int destination,
-                           Classification classification, long value, boolean crossCheckMismatch) {
+    private Mission3Result(int caseNumber, long[][] matrix, boolean[][] unboundedMatrix,
+                           int source, int destination, Classification classification, long value,
+                           int[] route, int[] cycle, boolean crossCheckMismatch) {
         this.caseNumber = caseNumber;
         this.matrix = matrix;
+        this.unboundedMatrix = unboundedMatrix;
         this.source = source;
         this.destination = destination;
         this.classification = classification;
         this.value = value;
+        this.route = route;
+        this.cycle = cycle;
         this.crossCheckMismatch = crossCheckMismatch;
     }
 
@@ -58,6 +72,11 @@ public final class Mission3Result {
      * GUI); si Bellman-Ford llega a una conclusion distinta para D,
      * queda registrado en isCrossCheckMismatch() sin alterar el
      * formato de toOutputLine().
+     *
+     * La reconstruccion visual (ruta o ciclo) sale siempre de
+     * Bellman-Ford, porque es quien mantiene la cadena de padres
+     * (parent[]) necesaria para reconstruirla; Floyd-Warshall solo
+     * aporta la matriz N x N.
      */
     public static Mission3Result of(int caseNumber,
                                     FloydWarshallSolver.Result floydWarshall,
@@ -69,8 +88,9 @@ public final class Mission3Result {
         boolean reachabilityMismatch = fwReachable != bfReachable;
 
         if (!fwReachable) {
-            return new Mission3Result(caseNumber, floydWarshall.getMatrix(), source, destination,
-                    Classification.LIMON_BLOCKED, 0L, reachabilityMismatch);
+            return new Mission3Result(caseNumber, floydWarshall.getMatrix(), floydWarshall.getUnboundedMatrix(),
+                    source, destination, Classification.LIMON_BLOCKED, 0L,
+                    new int[0], new int[0], reachabilityMismatch);
         }
 
         boolean fwUnbounded = floydWarshall.isUnbounded(source, destination);
@@ -78,17 +98,20 @@ public final class Mission3Result {
         boolean unboundedMismatch = fwUnbounded != bfUnbounded;
 
         if (fwUnbounded) {
-            return new Mission3Result(caseNumber, floydWarshall.getMatrix(), source, destination,
-                    Classification.INFINITE_CHURUN, 0L, reachabilityMismatch || unboundedMismatch);
+            return new Mission3Result(caseNumber, floydWarshall.getMatrix(), floydWarshall.getUnboundedMatrix(),
+                    source, destination, Classification.INFINITE_CHURUN, 0L,
+                    new int[0], bellmanFord.getCycle(), reachabilityMismatch || unboundedMismatch);
         }
 
         long fwValue = floydWarshall.getMaxChurun(source, destination);
         long bfValue = bellmanFord.getMaxChurun(destination);
         boolean valueMismatch = fwValue != bfValue;
 
-        return new Mission3Result(caseNumber, floydWarshall.getMatrix(), source, destination,
-                Classification.FINITE, fwValue,
-                reachabilityMismatch || unboundedMismatch || valueMismatch);
+        int[] route = BellmanFordSolver.reconstructPath(bellmanFord.getParent(), source, destination);
+
+        return new Mission3Result(caseNumber, floydWarshall.getMatrix(), floydWarshall.getUnboundedMatrix(),
+                source, destination, Classification.FINITE, fwValue,
+                route, new int[0], reachabilityMismatch || unboundedMismatch || valueMismatch);
     }
 
     public int getCaseNumber() {
@@ -98,6 +121,11 @@ public final class Mission3Result {
     /** La matriz N x N completa de Floyd-Warshall, para el panel scrollable que exige la seccion 2.3. */
     public long[][] getMatrix() {
         return matrix;
+    }
+
+    /** La matriz N x N paralela de unbounded, para que MatrixTableView formatee cada celda sin recalcular nada. */
+    public boolean[][] getUnboundedMatrix() {
+        return unboundedMatrix;
     }
 
     public int getSource() {
@@ -115,6 +143,24 @@ public final class Mission3Result {
     /** Solo tiene sentido cuando getClassification() == FINITE. */
     public long getValue() {
         return value;
+    }
+
+    /**
+     * La ruta (source -> ... -> destination) que logra el churun
+     * maximo. Solo tiene contenido cuando getClassification() ==
+     * FINITE; en los demas casos es un arreglo vacio.
+     */
+    public int[] getRoute() {
+        return route;
+    }
+
+    /**
+     * El ciclo de ganancia positiva responsable del "Infinite
+     * churun!". Solo tiene contenido cuando getClassification() ==
+     * INFINITE_CHURUN; en los demas casos es un arreglo vacio.
+     */
+    public int[] getCycle() {
+        return cycle;
     }
 
     /**
