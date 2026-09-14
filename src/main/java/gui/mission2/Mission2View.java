@@ -118,9 +118,9 @@ public final class Mission2View extends StackPane {
         InputStream stream = getClass().getResourceAsStream(TITLE_IMAGE_PATH);
         if (stream != null) {
             titleImageView.setImage(new Image(stream));
-            titleImageView.setFitWidth(600);
+            titleImageView.setFitWidth(700);
             // Ajusta este valor dependiendo de qué tan grande sea tu PNG original
-            titleImageView.setFitHeight(150);
+            titleImageView.setFitHeight(170);
         } else {
             System.err.println("Advertencia: No se encontró la imagen en " + TITLE_IMAGE_PATH);
         }

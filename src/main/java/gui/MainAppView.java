@@ -3,16 +3,19 @@ package gui;
 import gui.mission1.Mission1View;
 import gui.mission2.Mission2View;
 import gui.mission3.Mission3View;
+import gui.mission4.Mission4View;
+import javafx.animation.ScaleTransition;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Cursor;
 import javafx.scene.Scene;
-import javafx.scene.control.Button;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 
 import java.io.InputStream;
 
@@ -23,8 +26,11 @@ import java.io.InputStream;
  *
  * Pantalla de seleccion de mision (requisito 7.1). Usa la imagen de
  * fondo generada (con el titulo "Cronicas Gatunas" ya incluido en
- * la propia imagen) y superpone los 4 botones de mision debajo del
- * titulo.
+ * la propia imagen) y superpone, debajo del titulo, la imagen de
+ * titulo de cada mision (MissionXTitle.png) usada como boton: al
+ * pasar el mouse por encima, la imagen crece un poco (efecto
+ * "hover") para dar feedback de que es interactiva, y al hacer
+ * click se abre la mision correspondiente.
  *
  * Sobre el tamano de ventana fijo:
  *   La ventana se fija EXACTAMENTE al tamano nativo de la imagen
@@ -40,12 +46,29 @@ public final class MainAppView {
 
     private static final String BACKGROUND_IMAGE_PATH = "/images/MainMenuTitle.jpeg";
 
+    // Patron de nombre de las imagenes de titulo de cada mision,
+    // ubicadas junto al resto de imagenes del proyecto
+    // (src/main/resources/images/MissionXTitle.png).
+    private static final String MISSION_TITLE_IMAGE_PATH_PATTERN = "/images/Mission%dTitle.png";
+
+    // Ancho al que se escala cada imagen de titulo cuando se usa como
+    // boton (con preserveRatio, el alto se ajusta solo). Se mantiene
+    // chico y consistente entre las 4 misiones para que el menu se
+    // vea ordenado sin importar la relacion de aspecto de cada PNG.
+    private static final double MISSION_BUTTON_WIDTH = 260;
+
+    // Cuanto crece la imagen al pasar el mouse por encima (1.0 =
+    // tamano normal, 1.1 = 10% mas grande) y cuanto dura la
+    // animacion de crecimiento/regreso.
+    private static final double HOVER_SCALE = 1.12;
+    private static final Duration HOVER_ANIMATION_DURATION = Duration.millis(150);
+
     // Cuanto espacio dejar entre el borde inferior de la imagen y el
     // primer boton, como FRACCION de la altura total (no pixeles fijos),
     // para que se vea proporcional sin importar a que tamano se escale
     // la imagen en pantalla. Ajustar segun donde quede el area despejada
     // real en la imagen generada.
-    private static final double BUTTONS_BOTTOM_MARGIN_RATIO = 0.10;
+    private static final double BUTTONS_BOTTOM_MARGIN_RATIO = -0.16;
 
     // Cuanto de la pantalla disponible puede ocupar como maximo la
     // ventana (para dejar margen visible del sistema operativo:
@@ -61,7 +84,7 @@ public final class MainAppView {
     }
 
     public void show() {
-        Image background = loadBackgroundImage();
+        Image background = loadImage(BACKGROUND_IMAGE_PATH);
 
         double scale = computeScaleToFitScreen(background.getWidth(), background.getHeight());
         double width = background.getWidth() * scale;
@@ -91,21 +114,45 @@ public final class MainAppView {
     }
 
     private VBox buildMissionButtons() {
-        Button mission1Button = new Button("Mision 1: Minefield");
-        mission1Button.setOnAction(e -> openMission1());
-
-        Button mission2Button = new Button("Mision 2: Recuperando Claude");
-        mission2Button.setOnAction(e -> openMission2());
-
-        Button mission3Button = new Button("Mision 3: El Food Stash");
-        mission3Button.setOnAction(e -> openMission3());
-
-        Button mission4Button = new Button("Mision 4: Reconectando la Red");
-        mission4Button.setDisable(true);
+        ImageView mission1Button = createMissionTitleButton(1, this::openMission1);
+        ImageView mission2Button = createMissionTitleButton(2, this::openMission2);
+        ImageView mission3Button = createMissionTitleButton(3, this::openMission3);
+        ImageView mission4Button = createMissionTitleButton(4, this::openMission4);
 
         VBox box = new VBox(10, mission1Button, mission2Button, mission3Button, mission4Button);
         box.setAlignment(Pos.CENTER);
         return box;
+    }
+
+    /**
+     * Carga la imagen de titulo de la mision indicada y la deja lista
+     * para usarse como boton: cursor de mano, tamano fijo consistente
+     * entre misiones, click ejecuta la accion, y un efecto de "hover"
+     * que agranda la imagen suavemente al pasar el mouse por encima
+     * (y la regresa a su tamano normal al salir).
+     */
+    private ImageView createMissionTitleButton(int missionNumber, Runnable onClick) {
+        String path = String.format(MISSION_TITLE_IMAGE_PATH_PATTERN, missionNumber);
+        Image image = loadImage(path);
+
+        ImageView imageView = new ImageView(image);
+        imageView.setPreserveRatio(true);
+        imageView.setFitWidth(MISSION_BUTTON_WIDTH);
+        imageView.setCursor(Cursor.HAND);
+
+        imageView.setOnMouseClicked(e -> onClick.run());
+        imageView.setOnMouseEntered(e -> animateScale(imageView, HOVER_SCALE));
+        imageView.setOnMouseExited(e -> animateScale(imageView, 1.0));
+
+        return imageView;
+    }
+
+    /** Anima suavemente el escalado de un nodo hasta el factor indicado (1.0 = tamano normal). */
+    private void animateScale(ImageView imageView, double targetScale) {
+        ScaleTransition transition = new ScaleTransition(HOVER_ANIMATION_DURATION, imageView);
+        transition.setToX(targetScale);
+        transition.setToY(targetScale);
+        transition.playFromStart();
     }
 
     private void openMission1() {
@@ -132,6 +179,14 @@ public final class MainAppView {
         stage.setResizable(false);
     }
 
+    private void openMission4() {
+        Mission4View mission4View = new Mission4View(this::show);
+        Scene scene = new Scene(mission4View, windowWidth, windowHeight);
+
+        stage.setScene(scene);
+        stage.setResizable(false);
+    }
+
     /**
      * Calcula un factor de escala (siempre <= 1.0, nunca agranda la
      * imagen mas alla de su tamano original) para que la ventana
@@ -150,12 +205,12 @@ public final class MainAppView {
         return Math.min(1.0, Math.min(scaleForWidth, scaleForHeight));
     }
 
-    private Image loadBackgroundImage() {
-        InputStream stream = getClass().getResourceAsStream(BACKGROUND_IMAGE_PATH);
+    private Image loadImage(String path) {
+        InputStream stream = getClass().getResourceAsStream(path);
         if (stream == null) {
             throw new IllegalStateException(
-                    "No se encontro la imagen de fondo en " + BACKGROUND_IMAGE_PATH
-                            + ". Verifica que el archivo este en src/main/resources" + BACKGROUND_IMAGE_PATH
+                    "No se encontro la imagen en " + path
+                            + ". Verifica que el archivo este en src/main/resources" + path
                             + " y que el nombre coincida exactamente (sensible a mayusculas/minusculas).");
         }
         return new Image(stream);

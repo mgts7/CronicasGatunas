@@ -1,7 +1,7 @@
 package gui.mission3;
 
-import gui.common.CircularLayout;
 import gui.common.PixelArtUtils;
+import gui.common.ScatterLayout;
 import javafx.geometry.VPos;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
@@ -12,7 +12,12 @@ import javafx.scene.text.TextAlignment;
 import model.graph.Edge;
 import model.graph.Graph;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 
 /**
@@ -40,8 +45,7 @@ public final class GraphCanvas extends Canvas {
 
     private static final int MAX_DRAWABLE_NODES = 60;
     private static final double CANVAS_SIZE = 480;
-    private static final double RADIUS = 190;
-    private static final double CENTER = CANVAS_SIZE / 2;
+    private static final double SCATTER_MARGIN = 50; // deja espacio para que los nodos y sus etiquetas no queden pegados al borde
 
     // Paleta "pergamino"
     private static final Color EDGE_DIM = Color.rgb(120, 95, 60, 0.55);
@@ -63,6 +67,33 @@ public final class GraphCanvas extends Canvas {
     // Cuanto se arquea una arista cuando existe la arista opuesta entre
     // el mismo par de nodos (u->v Y v->u), para que no queden encimadas.
     private static final double CURVE_OFFSET = 18;
+
+    // Genera una semilla nueva en cada render(), para que el mapa se
+    // vea distinto entre una generacion y otra (ver ScatterLayout).
+    private final Random layoutSeedGenerator = new Random();
+
+    // Cuantas disposiciones candidatas se prueban para elegir la que
+    // menos cruces de aristas tiene (ver computeBestLayout). Minimizar
+    // cruces en general es NP-dificil; probar varias semillas al azar
+    // y quedarse con la mejor es una heuristica simple y efectiva para
+    // los tamanos de este proyecto (hasta 60 nodos visibles).
+    private static final int LAYOUT_CANDIDATE_COUNT = 25;
+
+    // Si el grafo tiene muchas mas aristas que esto, se salta la
+    // optimizacion (probar 25 candidatos con miles de aristas cada
+    // uno seria demasiado costoso para un simple redibujado de UI).
+    private static final int MAX_EDGES_FOR_CROSSING_OPTIMIZATION = 300;
+
+    // Cachea el layout ya calculado para un grafo, usando una clave
+    // basada en su CONTENIDO (no en la instancia de Graph, que
+    // cambia cada vez que se vuelve a parsear el mismo texto). Sin
+    // esto, presionar "Resolver" repetidas veces sobre el MISMO
+    // input generaba un mapa distinto cada vez, porque cada click
+    // volvia a llamar a Mission3Parser.parse(...) y creaba un objeto
+    // Graph nuevo (aunque con el mismo contenido). Con esta cache,
+    // el mapa solo cambia cuando el grafo realmente cambia (por
+    // ejemplo, al presionar "Generar").
+    private final Map<String, double[][]> layoutCache = new HashMap<>();
 
     public GraphCanvas() {
         super(CANVAS_SIZE, CANVAS_SIZE);
@@ -93,39 +124,153 @@ public final class GraphCanvas extends Canvas {
             return true;
         }
 
-        double[][] positions = CircularLayout.compute(n, CENTER, CENTER, RADIUS);
+        double[][] positions = computeBestLayout(graph, n);
         double nodeSize = computeNodeSize(n);
 
         Set<Long> highlightEdges = buildHighlightEdgeSet(highlightNodes, highlightIsCycle);
         boolean[] onHighlight = buildHighlightNodeMask(n, highlightNodes);
 
-        drawEdges(gc, graph, positions, highlightEdges, highlightIsCycle, nodeSize, source, destination);
+        drawEdges(gc, graph, positions, highlightEdges, highlightIsCycle);
         drawNodes(gc, positions, nodeSize, onHighlight, source, destination);
 
         return true;
     }
 
-    private double computeNodeSize(int n) {
-        double circumferenceShare = (2 * Math.PI * RADIUS) / n;
-        return Math.max(10, Math.min(24, circumferenceShare * 0.45));
+    /**
+     * Prueba LAYOUT_CANDIDATE_COUNT disposiciones distintas (cada una
+     * con una semilla al azar) y devuelve la que tiene menos cruces
+     * de aristas. Minimizar cruces de forma exacta es un problema
+     * NP-dificil en general; esta es una heuristica "mejor de N
+     * intentos al azar", simple y suficientemente efectiva para los
+     * tamanos de este proyecto.
+     */
+    private double[][] computeBestLayout(Graph graph, int n) {
+        String key = buildGraphKey(graph, n);
+        double[][] cached = layoutCache.get(key);
+        if (cached != null) {
+            return cached;
+        }
+
+        List<int[]> edgePairs = collectEdgePairs(graph, n);
+        double[][] result;
+
+        if (edgePairs.size() > MAX_EDGES_FOR_CROSSING_OPTIMIZATION) {
+            // Demasiadas aristas para que valga la pena optimizar: un
+            // solo intento al azar, y ya.
+            long seed = layoutSeedGenerator.nextLong();
+            result = ScatterLayout.compute(n, CANVAS_SIZE, CANVAS_SIZE, SCATTER_MARGIN, SCATTER_MARGIN, seed);
+        } else {
+            double[][] bestPositions = null;
+            int bestCrossings = Integer.MAX_VALUE;
+
+            for (int i = 0; i < LAYOUT_CANDIDATE_COUNT; i++) {
+                long seed = layoutSeedGenerator.nextLong();
+                double[][] candidate = ScatterLayout.compute(n, CANVAS_SIZE, CANVAS_SIZE, SCATTER_MARGIN, SCATTER_MARGIN, seed);
+                int crossings = countCrossings(candidate, edgePairs);
+
+                if (crossings < bestCrossings) {
+                    bestCrossings = crossings;
+                    bestPositions = candidate;
+                }
+                if (bestCrossings == 0) {
+                    break; // no se puede mejorar mas: cero cruces
+                }
+            }
+            result = bestPositions;
+        }
+
+        layoutCache.put(key, result);
+        return result;
     }
 
     /**
-     * Radio real con el que se dibuja un nodo (ver drawNodes(): source
-     * y destination se dibujan 1.3x mas grandes que el resto). Se
-     * necesita aqui para saber cuanto acortar cada arista que llega a
-     * ese nodo, de modo que la punta de flecha quede justo en el
-     * borde del circulo y no debajo de su relleno.
+     * Construye una clave que identifica el CONTENIDO del grafo (no
+     * la instancia de objeto): cantidad de nodos, mas cada arista con
+     * su peso. Dos grafos con exactamente los mismos datos producen
+     * la misma clave, sin importar si son instancias distintas de
+     * Graph (como pasa cada vez que se vuelve a parsear el mismo texto).
      */
-    private double nodeRadius(int node, double nodeSize, int source, int destination) {
-        boolean isEndpoint = (node == source || node == destination);
-        double size = isEndpoint ? nodeSize * 1.3 : nodeSize;
-        return size / 2;
+    private String buildGraphKey(Graph graph, int n) {
+        StringBuilder key = new StringBuilder();
+        key.append(n).append(';');
+        for (int u = 0; u < n; u++) {
+            for (Edge edge : graph.getNeighbors(u)) {
+                key.append(u).append('-').append(edge.getTo()).append('-').append(edge.getWeight()).append(',');
+            }
+        }
+        return key.toString();
+    }
+
+    /** Recolecta todas las aristas del grafo como pares de indices (u, v), ignorando self-loops. */
+    private List<int[]> collectEdgePairs(Graph graph, int n) {
+        List<int[]> edges = new ArrayList<>();
+        for (int u = 0; u < n; u++) {
+            for (Edge edge : graph.getNeighbors(u)) {
+                int v = edge.getTo();
+                if (u != v) {
+                    edges.add(new int[] { u, v });
+                }
+            }
+        }
+        return edges;
+    }
+
+    /**
+     * Cuenta cuantos pares de aristas se cruzan geometricamente,
+     * tratando cada una como un segmento recto entre los centros de
+     * sus nodos (una aproximacion: algunas aristas se dibujan curvas
+     * si hay reciprocidad, pero optimizar sobre la version recta ya
+     * reduce los cruces de la version final renderizada).
+     */
+    private int countCrossings(double[][] positions, List<int[]> edges) {
+        int count = 0;
+        for (int i = 0; i < edges.size(); i++) {
+            int[] e1 = edges.get(i);
+            for (int j = i + 1; j < edges.size(); j++) {
+                int[] e2 = edges.get(j);
+                // Aristas que comparten un extremo no cuentan como
+                // "cruce": es normal que se junten en un nodo comun.
+                if (e1[0] == e2[0] || e1[0] == e2[1] || e1[1] == e2[0] || e1[1] == e2[1]) {
+                    continue;
+                }
+                if (segmentsIntersect(positions[e1[0]], positions[e1[1]], positions[e2[0]], positions[e2[1]])) {
+                    count++;
+                }
+            }
+        }
+        return count;
+    }
+
+    /** Test clasico de interseccion de segmentos basado en orientacion (CCW). */
+    private boolean segmentsIntersect(double[] p1, double[] p2, double[] p3, double[] p4) {
+        double d1 = crossProduct(p3, p4, p1);
+        double d2 = crossProduct(p3, p4, p2);
+        double d3 = crossProduct(p1, p2, p3);
+        double d4 = crossProduct(p1, p2, p4);
+
+        return ((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0))
+                && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0));
+    }
+
+    private double crossProduct(double[] a, double[] b, double[] c) {
+        return (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+    }
+
+    /**
+     * Con ScatterLayout no hay una formula geometrica regular como la
+     * circunferencia (CircularLayout) o el tamano de celda (GridLayout):
+     * se estima el tamano en base al area promedio disponible por nodo.
+     */
+    private double computeNodeSize(int n) {
+        double usableWidth = CANVAS_SIZE - 2 * SCATTER_MARGIN;
+        double usableHeight = CANVAS_SIZE - 2 * SCATTER_MARGIN;
+        double areaPerNode = (usableWidth * usableHeight) / n;
+        double estimatedSpacing = Math.sqrt(areaPerNode);
+        return Math.max(10, Math.min(24, estimatedSpacing * 0.4));
     }
 
     private void drawEdges(GraphicsContext gc, Graph graph, double[][] positions,
-                           Set<Long> highlightEdges, boolean highlightIsCycle,
-                           double nodeSize, int source, int destination) {
+                           Set<Long> highlightEdges, boolean highlightIsCycle) {
         // Pasada 1: todas las aristas normales (linea + flecha + peso).
         for (int u = 0; u < positions.length; u++) {
             for (Edge edge : graph.getNeighbors(u)) {
@@ -134,12 +279,11 @@ public final class GraphCanvas extends Canvas {
                     continue; // se dibuja despues, resaltada
                 }
                 double[] control = curveControlPointOrNull(graph, positions, u, v);
-                double targetRadius = nodeRadius(v, nodeSize, source, destination);
 
                 gc.setLineDashes(4, 4);
                 gc.setLineWidth(1.3);
                 gc.setStroke(EDGE_DIM);
-                drawCurvedArrow(gc, positions[u], positions[v], control, targetRadius);
+                drawCurvedArrow(gc, positions[u], positions[v], control);
 
                 gc.setLineDashes(null);
                 drawEdgeWeightLabel(gc, positions[u], positions[v], control, edge.getWeight());
@@ -157,15 +301,14 @@ public final class GraphCanvas extends Canvas {
                     continue;
                 }
                 double[] control = curveControlPointOrNull(graph, positions, u, v);
-                double targetRadius = nodeRadius(v, nodeSize, source, destination);
 
                 gc.setLineDashes(null);
                 gc.setLineWidth(6);
                 gc.setStroke(glowColor);
-                drawCurvedArrow(gc, positions[u], positions[v], control, targetRadius);
+                drawCurvedArrow(gc, positions[u], positions[v], control);
                 gc.setLineWidth(2.2);
                 gc.setStroke(coreColor);
-                drawCurvedArrow(gc, positions[u], positions[v], control, targetRadius);
+                drawCurvedArrow(gc, positions[u], positions[v], control);
 
                 drawEdgeWeightLabel(gc, positions[u], positions[v], control, edge.getWeight());
             }
@@ -224,12 +367,6 @@ public final class GraphCanvas extends Canvas {
      * linea (que si es curva, es el punto medio de la curva de
      * Bezier cuadratica en t=0.5, no el punto medio geometrico entre
      * from y to).
-     *
-     * Se sigue calculando sobre el segmento/curva COMPLETA (from -> to
-     * originales, sin acortar), y no sobre la version recortada que
-     * usa drawCurvedArrow(): recortar la linea es solo para que la
-     * flecha no quede tapada por el nodo, pero el punto medio real de
-     * la arista (para el rotulo del peso) no deberia moverse por eso.
      */
     private void drawEdgeWeightLabel(GraphicsContext gc, double[] from, double[] to, double[] control, long weight) {
         double midX;
@@ -268,27 +405,14 @@ public final class GraphCanvas extends Canvas {
         gc.setTextBaseline(VPos.BASELINE);
     }
 
-    /**
-     * Dibuja la linea (recta si control es null, curva si no) con su
-     * punta de flecha, ACORTADA para que termine justo en el borde
-     * del circulo del nodo destino (a 'targetRadius' px de 'to') y no
-     * en su centro exacto. Sin este recorte, la punta de flecha (de
-     * solo 8px) queda completamente tapada por el relleno del nodo,
-     * que se dibuja despues (encima) en drawNodes().
-     */
-    private void drawCurvedArrow(GraphicsContext gc, double[] from, double[] to, double[] control, double targetRadius) {
-        // La tangente de llegada define desde donde se retrocede: en
-        // una curva, la tangente en 'to' apunta desde el punto de
-        // control hacia 'to'; en una linea recta, desde 'from' hacia 'to'.
-        double[] tangentOrigin = (control != null) ? control : from;
-        double[] shortenedTo = pullBackTowards(tangentOrigin, to, targetRadius);
-
+    /** Dibuja la linea (recta si control es null, curva si no) con su punta de flecha en 'to'. */
+    private void drawCurvedArrow(GraphicsContext gc, double[] from, double[] to, double[] control) {
         gc.beginPath();
         gc.moveTo(from[0], from[1]);
         if (control != null) {
-            gc.quadraticCurveTo(control[0], control[1], shortenedTo[0], shortenedTo[1]);
+            gc.quadraticCurveTo(control[0], control[1], to[0], to[1]);
         } else {
-            gc.lineTo(shortenedTo[0], shortenedTo[1]);
+            gc.lineTo(to[0], to[1]);
         }
         gc.stroke();
 
@@ -298,24 +422,11 @@ public final class GraphCanvas extends Canvas {
         // la flecha casi no se viera.
         gc.setLineDashes(null);
 
-        drawArrowHead(gc, tangentOrigin, shortenedTo);
-    }
-
-    /**
-     * Devuelve el punto sobre el segmento (origin -> point), a una
-     * distancia 'distance' antes de 'point'. Si 'point' esta a menos
-     * de 'distance' de 'origin' (grafo muy pequeno / nodos muy cerca),
-     * devuelve 'point' sin modificar para no invertir la flecha.
-     */
-    private double[] pullBackTowards(double[] origin, double[] point, double distance) {
-        double dx = point[0] - origin[0];
-        double dy = point[1] - origin[1];
-        double len = Math.hypot(dx, dy);
-        if (len <= distance || len < 1e-6) {
-            return point;
-        }
-        double ratio = (len - distance) / len;
-        return new double[] { origin[0] + dx * ratio, origin[1] + dy * ratio };
+        // La flecha se orienta segun la tangente de llegada: en una
+        // curva, esa tangente apunta desde el punto de control hacia
+        // 'to'; en una linea recta, desde 'from' hacia 'to'.
+        double[] tangentOrigin = (control != null) ? control : from;
+        drawArrowHead(gc, tangentOrigin, to);
     }
 
     private void drawArrowHead(GraphicsContext gc, double[] tangentOrigin, double[] tip) {
@@ -366,6 +477,15 @@ public final class GraphCanvas extends Canvas {
             gc.setStroke(borderColor);
             gc.setLineWidth(lineWidth);
             gc.strokeOval(x - h, y - h, size, size);
+
+            // "X marca el lugar" para el destino
+            if (isDestination) {
+                gc.setStroke(DESTINATION_COLOR);
+                gc.setLineWidth(1.8);
+                double m = h * 0.4;
+                gc.strokeLine(x - m, y - m, x + m, y + m);
+                gc.strokeLine(x - m, y + m, x + m, y - m);
+            }
 
             gc.setFill(LABEL_COLOR);
             gc.fillText(String.valueOf(i), x - h * 0.35, y + h * 0.35);
