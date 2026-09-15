@@ -1,30 +1,6 @@
 package algorithm.mission4;
 
 /**
- * ============================================================
- * UNION-FIND (Disjoint Set) - Mision 4
- * ============================================================
- *
- * Estructura auxiliar de Kruskal: permite saber en tiempo casi
- * constante si dos intersecciones ya estan conectadas (directa o
- * indirectamente), lo cual es exactamente lo que Kruskal necesita
- * para decidir si un cable formaria un ciclo (y por lo tanto debe
- * descartarse) o si conecta dos componentes distintas (y por lo
- * tanto debe usarse).
- *
- * Las dos optimizaciones que exige el enunciado:
- *
- * 1. Compresion de caminos (path compression):
- *    Cada vez que se llama find(x), todos los nodos visitados en el
- *    camino hacia la raiz quedan apuntando mas cerca de la raiz
- *    (aqui con "path halving": cada nodo salta a su abuelo). Esto
- *    aplana el arbol con el tiempo, acelerando busquedas futuras.
- *
- * 2. Union por tamano (union by size):
- *    Al unir dos conjuntos, el arbol mas chico siempre cuelga del
- *    mas grande. Sin esto, en el peor caso los arboles podrian
- *    degenerar en una lista enlazada de profundidad N.
- *
  * Complejidad:
  *   Con ambas optimizaciones combinadas, cada operacion (find o
  *   union) es O(alpha(N)) amortizado, donde alpha es la inversa de

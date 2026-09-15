@@ -10,42 +10,14 @@ import java.util.Deque;
 import java.util.List;
 
 /**
- * ============================================================
- * BELLMAN-FORD (variante de MAXIMIZACION) - Mision 3
- * ============================================================
- *
- * Por que Bellman-Ford es necesario aqui (ademas de Floyd-Warshall):
- *   Bellman-Ford es quien detecta los ciclos de ganancia positiva
- *   de forma directa: relaja todas las aristas N-1 veces y, si en
- *   una ronda extra algun nodo TODAVIA mejora, ese nodo pertenece a
- *   (o es alimentado por) un ciclo rentable.
- *
- * Reconstruccion visual (seccion 5, punto 3: "The drawing must show
- * the graph with the route achieving the maximum highlighted. When
- * the answer is Infinite churun!, highlight the cycle responsible
- * instead of a route."):
- *   - Caso finito: se seguye la cadena de padres (parent[]) desde
- *     el destino hasta el origen. Esto es seguro (no da vueltas
- *     infinitas) porque, si no hay un ciclo de ganancia positiva
- *     que sea alcanzable desde S Y pueda llegar a D, la caminata
- *     optima siempre es equivalente a un camino SIMPLE (revisitar
- *     un nodo sin una ganancia neta positiva en el ciclo nunca
- *     mejora el resultado, asi que existe un optimo sin repeticiones).
- *   - Caso "Infinite churun!": se usa la tecnica clasica de Bellman-
- *     Ford para extraer un ciclo: se parte de un nodo que todavia
- *     mejora en la ronda extra, se retrocede N veces por parent[]
- *     (esto garantiza, por el principio del palomar, terminar
- *     DENTRO del ciclo), y desde ahi se seyue la cadena hacia atras
- *     hasta repetir un nodo, delimitando el ciclo completo.
- *
  * Complejidad:
  *   - Tiempo:  O(N * M) para las rondas de relajacion, mas O(N)
  *              adicional para la extraccion del ciclo si aplica.
  *   - Espacio: O(N + M).
  */
+
 public final class BellmanFordSolver {
 
-    /** Valor centinela: el nodo no ha sido alcanzado desde el origen. */
     public static final long NO_ROUTE = Long.MIN_VALUE;
 
     private BellmanFordSolver() {
@@ -104,7 +76,6 @@ public final class BellmanFordSolver {
         return new Result(dist, unbounded, parent, cycle);
     }
 
-    /** Una pasada de relajacion sobre todas las aristas del grafo. Devuelve true si algo mejoro. */
     private static boolean relaxAllEdges(Graph graph, int n, long[] dist, int[] parent) {
         boolean changed = false;
         for (int u = 0; u < n; u++) {
@@ -145,25 +116,6 @@ public final class BellmanFordSolver {
         return unbounded;
     }
 
-    /**
-     * Extrae el ciclo de ganancia positiva a partir de un nodo que
-     * todavia mejoraba en la ronda extra. Retrocede n veces por
-     * parent[] (garantiza caer dentro del ciclo) y luego recorre
-     * hacia atras hasta repetir un nodo.
-     *
-     * IMPORTANTE sobre el orden del arreglo devuelto:
-     *   Al recorrer parent[] hacia atras, cada nodo agregado es el
-     *   padre del anterior; es decir, el arco REAL del grafo va de
-     *   parent[x] -> x, o sea de la posicion (i+1) a la posicion (i)
-     *   de la lista tal como se construye. Ese es el orden INVERSO
-     *   al que espera GraphCanvas (que asume cycle[i] -> cycle[i+1]),
-     *   asi que aqui se invierte el arreglo antes de devolverlo -
-     *   exactamente como ya hacia reconstructPath() para la ruta
-     *   finita. Sin esta inversion, el ciclo resaltado en rojo nunca
-     *   coincide con ninguna arista real del grafo (salvo por
-     *   casualidad en ciclos de 2 nodos, donde ambos sentidos
-     *   existen), y por eso no se pintaba nada.
-     */
     private static int[] extractCycle(int[] parent, int markedNode, int n) {
         int current = markedNode;
         for (int i = 0; i < n; i++) {
@@ -184,13 +136,6 @@ public final class BellmanFordSolver {
         return result;
     }
 
-    /**
-     * Reconstruye la ruta desde source hasta destination siguiendo
-     * parent[] hacia atras. Incluye un guard defensivo (conjunto de
-     * visitados) para nunca dar vueltas infinitas, aunque
-     * matematicamente no deberia hacer falta cuando destination no
-     * es unbounded (ver el javadoc de la clase).
-     */
     public static int[] reconstructPath(int[] parent, int source, int destination) {
         List<Integer> reversed = new ArrayList<>();
         boolean[] visited = new boolean[parent.length];
@@ -215,12 +160,6 @@ public final class BellmanFordSolver {
         return path;
     }
 
-    /**
-     * Resultado desde un unico origen: el churun maximo hacia cada
-     * nodo, cuales nodos son "unbounded", la cadena de padres (para
-     * reconstruir rutas) y el ciclo de ganancia positiva detectado
-     * (vacio si no existe ninguno alcanzable desde el origen).
-     */
     public static final class Result {
         private final long[] maxChurun;
         private final boolean[] unbounded;

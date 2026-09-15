@@ -7,30 +7,16 @@ import java.util.Arrays;
 import java.util.Deque;
 
 /**
- * ============================================================
- * BFS (Breadth-First Search) - Mision 1: Rescatando a Nina
- * ============================================================
- *
- * Por que BFS es la eleccion correcta aqui:
- *   El grid no tiene pesos (cada movimiento cuesta 1), asi que BFS
- *   explora "por niveles" y garantiza que la primera vez que se
- *   alcanza el destino, se hizo con el numero minimo de movimientos.
- *   DFS (ver DFSSolver) NO tiene esta garantia: encuentra *un*
- *   camino valido, no necesariamente el mas corto.
- *
+
  * Complejidad:
  *   - Tiempo:  O(R * C) - cada celda se encola y desencola una sola vez.
  *   - Espacio: O(R * C) - arreglo de distancias + arreglo de padres
  *              (para reconstruir el camino) + cola.
- *
- * No se construye una lista de adyacencia explicita (a diferencia
- * del ejemplo generico de grafos): los vecinos se calculan al vuelo
- * con aritmetica de fila/columna, lo cual es indispensable para
- * grids de hasta 1000x1000 (10^6 celdas) sin desperdiciar memoria.
  */
+
 public final class BFSSolver {
 
-    /** Valor centinela que indica que el destino es inalcanzable. */
+
     public static final int UNREACHABLE = -1;
 
     // Orden fijo de exploracion: arriba, abajo, izquierda, derecha.
@@ -44,14 +30,6 @@ public final class BFSSolver {
         // Utility class: no se instancia.
     }
 
-    /**
-     * Calcula el camino minimo desde (startRow, startCol) hasta (endRow, endCol).
-     *
-     * @return un Result con el numero minimo de movimientos y el
-     *         camino completo (celda por celda, desde start hasta
-     *         end inclusive), o un Result no alcanzable si no existe
-     *         camino (o si start/end contienen una bomba).
-     */
     public static Result solve(Grid grid, int startRow, int startCol, int endRow, int endCol) {
         if (grid.isBomb(startRow, startCol) || grid.isBomb(endRow, endCol)) {
             return Result.unreachable();
@@ -114,11 +92,7 @@ public final class BFSSolver {
         return Result.unreachable();
     }
 
-    /**
-     * Reconstruye el camino desde start hasta end siguiendo los
-     * punteros de padre hacia atras, y luego invierte el resultado
-     * para que quede en orden start -> end.
-     */
+
     private static int[][] reconstructPath(int[] parent, int startIdx, int endIdx, int cols, int moves) {
         int[][] path = new int[moves + 1][2];
 
@@ -132,11 +106,7 @@ public final class BFSSolver {
         return path;
     }
 
-    /**
-     * Resultado de BFS: si el destino es alcanzable, el numero
-     * minimo de movimientos y el camino completo (para que la GUI
-     * lo resalte); si no, ninguno de los dos tiene sentido.
-     */
+
     public static final class Result {
         private final int moves;
         private final int[][] path;
@@ -162,7 +132,6 @@ public final class BFSSolver {
             return moves;
         }
 
-        /** El camino completo, celda por celda, desde start hasta end (ambos incluidos). Vacio si es inalcanzable. */
         public int[][] getPath() {
             return path;
         }

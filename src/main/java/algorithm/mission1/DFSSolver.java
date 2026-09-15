@@ -3,40 +3,6 @@ package algorithm.mission1;
 import model.grid.Grid;
 
 /**
- * ============================================================
- * DFS (Depth-First Search) - Mision 1: Rescatando a Nina
- * ============================================================
- *
- * Por que este DFS es ITERATIVO (pila explicita) y no recursivo:
- *   El enunciado indica que los grids pueden llegar a 10^6 celdas.
- *   Una version recursiva como la del ejemplo generico de grafos
- *   (dfsRec, que usa la pila de llamadas del sistema) desbordaria
- *   el stack de Java en un grid asi de grande. Por eso se simula
- *   la recursion a mano con un arreglo que actua como pila:
- *   cada "frame" guarda el nodo actual y cual de sus 4 vecinos
- *   (en el orden arriba/abajo/izquierda/derecha) toca probar despues.
- *
- * Por que el resultado NO es necesariamente el camino mas corto:
- *   DFS se compromete con la primera rama que encuentra y solo
- *   retrocede (backtracking) cuando esa rama se agota. El camino
- *   que reporta es valido, pero normalmente mas largo que el de BFS
- *   (ver el ejemplo del enunciado: BFS 18 vs DFS 32 movimientos).
- *
- * Determinismo:
- *   El orden fijo arriba, abajo, izquierda, derecha hace que el
- *   resultado sea reproducible: cualquier otro orden de exploracion
- *   produce un camino (tambien valido) distinto, que no coincidiria
- *   con la respuesta esperada.
- *
- * Reconstruccion del camino (sin trabajo extra):
- *   La pila explicita YA ES el camino actual desde start hasta el
- *   nodo en el que estamos. Cuando currentIdx == endIdx, el
- *   contenido de stackNode[0..top] es exactamente la secuencia de
- *   celdas visitadas desde start hasta end: no hace falta ningun
- *   arreglo de padres ni reconstruccion hacia atras (a diferencia
- *   de BFS, que si lo necesita porque explora en orden de niveles,
- *   no en el orden final del camino).
- *
  * Complejidad:
  *   - Tiempo:  O(R * C) - cada celda se visita (se marca visited) una sola vez;
  *              cada frame de la pila hace a lo sumo 4 intentos de vecino.
@@ -52,18 +18,6 @@ public final class DFSSolver {
     private static final int[] D_ROW = {-1, 1, 0, 0};
     private static final int[] D_COL = {0, 0, -1, 1};
 
-    private DFSSolver() {
-        // Utility class: no se instancia.
-    }
-
-    /**
-     * Encuentra un camino desde (startRow, startCol) hasta (endRow, endCol)
-     * explorando con DFS en el orden fijo arriba/abajo/izquierda/derecha.
-     *
-     * @return un Result con el numero de movimientos y el camino
-     *         completo (celda por celda), o un Result no alcanzable
-     *         si no existe camino (o si start/end contienen una bomba).
-     */
     public static Result solve(Grid grid, int startRow, int startCol, int endRow, int endCol) {
         if (grid.isBomb(startRow, startCol) || grid.isBomb(endRow, endCol)) {
             return Result.unreachable();
@@ -134,7 +88,7 @@ public final class DFSSolver {
         return Result.unreachable();
     }
 
-    /** Convierte los indices planos que quedaron en la pila (0..top) a pares (row, col), en orden start -> end. */
+    /** Convierte los indices planos que quedaron en la pila (0..top) a pares (row, col) */
     private static int[][] extractPath(int[] stackNode, int top, int cols) {
         int[][] path = new int[top + 1][2];
         for (int i = 0; i <= top; i++) {
@@ -144,11 +98,7 @@ public final class DFSSolver {
         return path;
     }
 
-    /**
-     * Resultado de DFS: si el destino es alcanzable, el numero de
-     * movimientos del camino encontrado y el camino completo (para
-     * que la GUI lo resalte); si no, ninguno de los dos tiene sentido.
-     */
+
     public static final class Result {
         private final int moves;
         private final int[][] path;
@@ -174,7 +124,6 @@ public final class DFSSolver {
             return moves;
         }
 
-        /** El camino completo, celda por celda, desde start hasta end (ambos incluidos). Vacio si es inalcanzable. */
         public int[][] getPath() {
             return path;
         }

@@ -6,38 +6,14 @@ import model.graph.Graph;
 import java.util.Arrays;
 
 /**
- * ============================================================
- * FLOYD-WARSHALL (variante de MAXIMIZACION) - Mision 3
- * ============================================================
- *
- * Por que Floyd-Warshall es la eleccion correcta aqui:
- *   El enunciado exige mostrar en la GUI la matriz N x N completa
- *   de churun maximo entre TODOS los pares de nodos (no solo S->D).
- *   Floyd-Warshall calcula exactamente eso en una sola pasada.
- *
- * Sobre "walk" vs "simple path":
- *   La recurrencia d[i][j] = max(d[i][j], d[i][k] + d[k][j]) no
- *   prohibe revisitar nodos: por construccion calcula el maximo
- *   sobre CAMINATAS (walks), no caminos simples. Buscar la caminata
- *   simple mas larga seria NP-duro; maximizar sobre caminatas es
- *   exactamente lo que esta recurrencia resuelve en O(N^3).
- *
- * Deteccion de "Infinite churun!" (ciclos de ganancia positiva):
- *   Al terminar el triple loop, d[k][k] > 0 significa que existe
- *   una caminata que sale de k y regresa a k con ganancia neta
- *   positiva (un ciclo rentable). Si ademas k es alcanzable desde i
- *   y desde k se puede llegar a j, entonces (i,j) es "unbounded":
- *   se puede dar vueltas al ciclo tantas veces como se quiera antes
- *   de continuar hacia j, acumulando churun sin limite.
- *
  * Complejidad:
  *   - Tiempo:  O(N^3) - triple loop sobre k, i, j.
  *   - Espacio: O(N^2) - la matriz de distancias y la de unbounded.
  *   Con N hasta 100 (limite del enunciado), N^3 = 10^6, muy rapido.
  */
+
 public final class FloydWarshallSolver {
 
-    /** Valor centinela: no existe ninguna caminata de i a j. */
     public static final long NO_ROUTE = Long.MIN_VALUE;
 
     private FloydWarshallSolver() {
@@ -108,10 +84,7 @@ public final class FloydWarshallSolver {
         return new Result(dist, unbounded);
     }
 
-    /**
-     * Resultado completo: la matriz N x N de churun maximo, y la
-     * matriz paralela de que pares son "unbounded" (churun infinito).
-     */
+
     public static final class Result {
         private final long[][] maxChurun;
         private final boolean[][] unbounded;

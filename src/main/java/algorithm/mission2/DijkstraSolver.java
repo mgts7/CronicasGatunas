@@ -9,47 +9,16 @@ import java.util.List;
 import java.util.PriorityQueue;
 
 /**
- * ============================================================
- * DIJKSTRA - Mision 2: Recuperando las cuentas de Claude
- * ============================================================
- *
- * Por que Dijkstra es la eleccion correcta aqui:
- *   Los pesos son NO negativos (0 <= W <= 1,000,000), que es
- *   exactamente la condicion que garantiza que Dijkstra sea
- *   correcto: una vez que un nodo se extrae de la cola de
- *   prioridad con su distancia minima, esa distancia ya no puede
- *   mejorar. Con pesos negativos este supuesto se rompe (ver
- *   Mission 3, que si permite pesos negativos y por eso usa
- *   Bellman-Ford en su lugar).
- *
+
  * Complejidad:
  *   - Tiempo:  O((N + C) log N) usando PriorityQueue.
  *   - Espacio: O(N + C) para distancias, padres y la cola.
  *
- * Reconstruccion del camino:
- *   Ademas del costo, se guarda un arreglo de padres (parent[]) que
- *   se actualiza cada vez que se relaja una arista con una distancia
- *   mejor. Al llegar al destino, se sigue esa cadena de padres hacia
- *   atras para reconstruir la ruta completa nodo por nodo, necesaria
- *   para que la GUI resalte el camino sobre la red.
  */
 public final class DijkstraSolver {
 
-    /** Valor centinela que indica que el destino es inalcanzable. */
     public static final long UNREACHABLE = -1L;
 
-    private DijkstraSolver() {
-        // Utility class: no se instancia.
-    }
-
-    /**
-     * Calcula la ruta de costo minimo desde source hasta destination.
-     *
-     * @return un Result con el costo minimo y la secuencia completa
-     *         de nodos del camino (desde source hasta destination,
-     *         ambos incluidos), o un Result no alcanzable si
-     *         destination no es alcanzable desde source.
-     */
     public static Result solve(Graph graph, int source, int destination) {
         if (source == destination) {
             return Result.of(0L, new int[] { source });
@@ -132,11 +101,7 @@ public final class DijkstraSolver {
         }
     }
 
-    /**
-     * Resultado de Dijkstra: si el destino es alcanzable, el costo
-     * minimo y el camino completo (para que la GUI lo resalte sobre
-     * la red); si no, ninguno de los dos tiene sentido.
-     */
+
     public static final class Result {
         private final long cost;
         private final int[] path;
@@ -162,7 +127,6 @@ public final class DijkstraSolver {
             return cost;
         }
 
-        /** La secuencia de nodos del camino, desde source hasta destination (ambos incluidos). Vacio si es inalcanzable. */
         public int[] getPath() {
             return path;
         }

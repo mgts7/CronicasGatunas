@@ -156,6 +156,7 @@ public final class Mission1View extends StackPane {
             // TODO: cuando exista un AudioManager con musica/efectos,
             // conectar aqui: AudioManager.getInstance().setMuted(muted);
         });
+        muteButton.setOpacity(0);
 
         Region spacerLeft = new Region();
         Region spacerRight = new Region();
